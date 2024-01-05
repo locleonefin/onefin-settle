@@ -1,0 +1,338 @@
+server:
+  port: 8064
+
+spring:
+  datasource:
+    #    url: jdbc:mariadb://localhost:3306/onefinbanks
+    #    username: root
+    #    password: ROOT
+    url: jdbc:mariadb://172.16.14.103:3306/onefinbanks
+    username: onefin01
+    password: Matkhau@1
+    driver-class-name: org.mariadb.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MariaDBDialect
+    show-sql: false
+    hibernate:
+      ddl-auto: none
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
+    properties:
+      org:
+        quartz:
+          scheduler:
+            instanceId: AUTO
+            instanceName: connector-settlement #Unique
+          jobStore:
+            class: org.quartz.impl.jdbcjobstore.JobStoreTX
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+            useProperties: false
+            tablePrefix: QRTZ_
+            misfireThreshold: 1000
+            clusterCheckinInterval: 5000
+            isClustered: true
+          threadPool:
+            class: org.quartz.simpl.SimpleThreadPool
+            threadCount: 25
+            threadPriority: 5
+            threadsInheritContextClassLoaderOfInitializingThread: true
+
+proxy:
+  active: false
+  host: 172.16.14.101
+  port: 3128
+  activeAuth: false
+  userName:
+  password:
+
+sftp:
+  bvbank:
+    virtualAcct:
+      host: 172.16.14.101
+      port: 22
+      username: sftp_bvbank
+      password: OnRkZfHbv_Jb
+      fileNamePrefix: VA_ONEFIN_All_
+      fileNameHourPrefix: VA_ONEFIN_
+      reconciliationTemplate: C:\Users\huynh\OneDrive\Documents\New folder\Git\onefin-repo\conn-ewallet-settlement\src\main\resources\template_xlsx\bvb\reconciliation.xlsx
+      reconciliationTemplateExport: C:\Users\huynh\OneDrive\Documents\New folder\Git\onefin-repo\conn-ewallet-settlement\src\main\resources\template_xlsx\bvb\reconciliation-export.xlsx
+      emailUrlPath: /utilities/notifications/email
+      reconciliationEmail: locle@onefin.vn
+      reconciliationCCEmail:
+      uriBvbVirtualAcct: http://ewallet-backup.onefin.in/backup/ewallet/bvbVirtualAcct
+      directory:
+        remoteOut: /files/uploads
+        remoteIn: /files/VA/
+        remoteBackup: /files/
+    transExport:
+      reconciliationEmail: quyentran@onefin.vn
+      reconciliationCCEmail: locle@onefin.vn
+  vietin:
+    link_bank:
+      host: 172.16.14.101
+      port: 22
+      username: sftp_vietinbank
+      password: _3i6A4Cz
+      directory:
+        remoteOut: /files/VIETINBANK_OUT/
+        remoteIn: /files/VIETINBANK_IN/
+        remoteBackup: /files/VIETINBANK_BACKUP/
+        storeFile: C:\Users\quanhoang\OneFin\SETTLEMENT\VIETIN_EWALLET1\
+    billpay:
+      host: 172.16.14.101
+      port: 22
+      username: sftp_vietinbank
+      password: _3i6A4Cz
+      directory:
+        remoteOut: /files/VIETINBANK_OUT/
+        remoteIn: /files/VIETINBANK_IN/
+        remoteBackup: /files/VIETINBANK_BACKUP/
+        storeFile: C:\Users\quanhoang\OneFin\SETTLEMENT\VIETIN_BILLPAY\
+    disbursement:
+      host: 172.16.14.101
+      port: 22
+      username: sftp_vietinbank
+      password: _3i6A4Cz
+      directory:
+        remoteOut: /files/VIETINBANK_OUT/
+        remoteIn: /files/VIETINBANK_IN/
+        remoteBackup: /files/VIETINBANK_BACKUP/
+        storeFile: C:\Users\quanhoang\OneFin\SETTLEMENT\VIETIN_DISBURSEMENT\
+    virtualAcct:
+      host: 172.16.14.101
+      port: 22
+      username: sftp_vietinbank
+      password: _3i6A4Cz
+      directory:
+        remoteOut: /files/VIETINBANK_OUT/
+        remoteIn: /files/VIETINBANK_IN/
+        remoteBackup: /files/VIETINBANK_BACKUP/
+        storeFile: C:\Users\quanhoang\OneFin\SETTLEMENT\VIETIN_VIRTUAL_ACCT\
+  napas:
+    ce:
+      host: 172.16.14.101
+      port: 2443
+      username: onefin
+      password: gYrsUv#3
+      directory:
+        ofPrivateKey: C:\Users\quanhoang\OneFin\source_code\OF_ewallet\conn-ewallet-settlement\src\main\resources\keys\ONEFIN_PGP_Privatekeys.pem
+        napasPublicKey: C:\Users\quanhoang\OneFin\source_code\OF_ewallet\conn-ewallet-settlement\src\main\resources\keys\public01.cer
+        remoteOut: /ECOM/Outbox/
+        remoteIn: /ECOM/Inbox/
+        storeFile: C:\Users\quanhoang\OneFin\SETTLEMENT\NAPAS_EWALLET\
+    ew:
+      host: 172.16.14.101
+      port: 2443
+      username: onefin
+      password: gYrsUv#3
+      directory:
+        ofPrivateKey: C:\Users\quanhoang\OneFin\source_code\OF_ewallet\conn-ewallet-settlement\src\main\resources\keys\ONEFIN_PGP_Privatekeys.pem
+        napasPublicKey: C:\Users\quanhoang\OneFin\source_code\OF_ewallet\conn-ewallet-settlement\src\main\resources\keys\public01.cer
+        remoteOut: /ECOM/Outbox/
+        remoteIn: /ECOM/Inbox/
+        storeFile: C:\Users\quanhoang\OneFin\SETTLEMENT\NAPAS_EWALLET\
+    co:
+      host: 103.9.4.63
+      port: 2443
+      username: onefin
+      password: Xv$b2e5Q
+      directory:
+        ofPrivateKey: ./keys/ONEFIN_PGP_Privatekeys.pem
+        napasPublicKey: ./keys/public01.cer
+        remoteOut: /ECOM/Outbox/
+        remoteIn: /ECOM/Inbox/
+        storeFile: ./settlement/napas_ewallet/
+  vnpay:
+    airtime:
+      storeFile: C:\Users\quanhoang\OneFin\SETTLEMENT\VNPAY_AIRTIME\
+      templateFile: ./src/main/resources/BBĐS OF-VNPay.xlsx
+    sms:
+      storeFile: C:\Users\quanhoang\OneFin\SETTLEMENT\VNPAY_SMS\
+  imedia:
+    transaction:
+      billStoreFile: C:\Users\quanhoang\OneFin\settlement\IMEDIA\bill\
+      topupStoreFile: C:\Users\quanhoang\OneFin\settlement\IMEDIA\topup\
+      templateFile: ./src/main/resources/BBĐS OF-VNPay.xlsx
+  merchant:
+    paydi:
+      host: 172.16.14.101
+      port: 22
+      username: sftp_paydi
+      password: tqrV7mviq7Zj
+      directory:
+        remoteIn: /files/PAYDI_IN/
+        remoteBackup: /files/PAYDI_BACKUP/
+        remoteOut: /files/PAYDI_OUT/
+        storeFile: C:\Users\quanhoang\OneFin\SETTLEMENT\PAYDI\
+
+settlement:
+  baseUrl: http://minio-in.onefin.vn:9090/object-browser/
+  minioBucket: ewallet-settlement-file
+  ofReceiver: tttt@onefin.vn
+  imedia:
+    minioDefaultFolder: /IMEDIA/
+  vietin:
+    link_bank:
+      privateKeyChecksum: 123456
+      providerName: ONEFIN
+      recordTypeDetail: '0002'
+      recordTypeEnd: '0009'
+      rcReconcileOK: '00'
+      msgTypePayment: '1210'
+      msgTypeRefund: '1402'
+      msgTypeCashout: '1610'
+      vt0OF1: '01'
+      vt1OF0: '02'
+      vtOFFail: '03'
+      defaultExecuteUser: OneFin
+      minioDefaultFolder: /VIETIN_LINKBANK/
+      settleCompletedBefore: '12:00:00'
+    billpay:
+      privateKeyChecksum: KEYTEST
+      providerName: ONEFIN
+      providerId: 196
+      merchantId: 1960
+      recordType: '002'
+      reconsolidateRecordType: '003'
+      endRecordType: '009'
+      successStatus: '00'
+      minioDefaultFolder: /VIETIN_BILLPAY/
+      settleCompletedBefore: '12:00:00'
+    disbursement:
+      privateKeyChecksum: KEYTEST
+      providerName: ONEFIN
+      providerId: 777
+      merchantId: 777
+      recordType: '002'
+      reconsolidateRecordType: '003'
+      endRecordType: '009'
+      reconcile_00: '00'
+      reconcile_01: '01'
+      reconcile_02: '02'
+      reconcile_03: '03'
+      reconcile_04: '04'
+      minioDefaultFolder: /VIETIN_DISBURSEMENT/
+      settleCompletedBefore: '12:00:00'
+    virtualAcct:
+      privateKeyChecksum: 0a1a7882e31e10915e35d66d5e9d63e7
+      providerId: 777
+      merchantId: 777
+      userId: AUTO
+      minioDefaultFolder: /VIETIN_VITRTUALACCT/
+      settleCompletedBefore: '15:00:00'
+  napas:
+    ce:
+      zzz: ACQ
+      bbb: ONEFINCE
+      tctvCode: 971037
+      settleOrder: 1
+      settleFileTypeTC: TC
+      settleFileTypeSL: SL
+      settleFileTypeXL: XL
+      serviceCodeEcom: ECOM
+      defaultExecuteUser: OneFin
+      gdBH: '0117'
+      gdHTTP: '0115'
+      gdHTBP: '0114'
+      minioDefaultFolder: /NAPAS_EWALLET/
+    ew:
+      zzz: ACQ
+      bbbWL1: ONEFINWL1
+      bbbWL2: ONEFINWL2
+      bbbWL3: ONEFINWL3
+      tctvCode: 971037
+      settleOrder: 1
+      settleFileTypeTC: TC
+      settleFileTypeSL: SL
+      settleFileTypeXL: XL
+      serviceCodeEcom: ECOM
+      defaultExecuteUser: OneFin
+      gdBH: '0117'
+      gdHTTP: '0115'
+      gdHTBP: '0114'
+      minioDefaultFolder: /NAPAS_EWALLET/
+    co:
+      zzz: BNB
+      bbb: ONEFINCE
+      tctvCode: 971037
+      settleOrder: 1
+      settleFileTypeTC: TC
+      settleFileTypeSL: SL
+      settleFileTypeXL: XL
+      serviceCodeEcom: ECOM
+      defaultExecuteUser: OneFin
+      gdBH: '0117'
+      gdSL: '0116'
+      gdHTTP: '0115'
+      gdHTBP: '0114'
+      minioDefaultFolder: /NAPAS_EWALLET/
+  vnpay:
+    airtime:
+      pendingCode: '08'
+      successCode: '00'
+      minioDefaultFolder: /VNPAY_AIRTIME/
+    sms:
+      successCode: SUCCESS
+      minioDefaultFolder: /VNPAY_SMS/
+  merchant:
+    paydi:
+      privateKeyChecksum: 123456
+      recordTypeDetail: '0002'
+      recordTypeEnd: '0009'
+      rcReconcileOK: '00'
+      rcReconcileFail: '01'
+      settleCompletedBefore: '11:00:00'
+
+
+minio:
+  host: https://minio-in.onefin.vn:9000
+  accessKey: minio
+  secretKey: minio123
+  ewalletCommonFileBucket: ewallet-common-file
+  bvbReconciliationBucket: ewallet-settlement-file
+  commonMerchantReconciliationBucket: ewallet-settlement-file
+
+bvb:
+  IBFT:
+    onefinPrivateKey: C:\Users\huynh\OneDrive\Documents\New folder\Git\onefin-repo\conn-ewallet-bank\src\main\resources\keys\bvb\rsa_onefin_2048_priv.pem
+    bvbPublicKey: C:\Users\huynh\OneDrive\Documents\New folder\Git\onefin-repo\conn-ewallet-bank\src\main\resources\keys\bvb\BVBank_Onefin_UAT_2048_pub.pem
+    onefinMerchantCode: ONEF
+    onefinClientCode: ONEFINIBFT
+    url:
+      queryStatus: http://203.205.28.29:9202/processor/payment/querystatus
+      inquiry: http://203.205.28.29:9202/processor/payment/inquiry
+      fundTransfer: http://203.205.28.29:9202/processor/payment/fundTransfer
+      inquiryEscrowAccount: http://203.205.28.29:9202/processor/payment/inquiryEscrowAccount
+      uploadReconciliation: http://203.205.28.29:9202/processor/payment/uploadReconciliation
+
+conn-service:
+  utility:
+    host: http://localhost:8062
+    uri:
+      notify: /utilities/notifications/email
+      ascMerchantList: /utilities/pg/asc/list
+  bank:
+    host: http://localhost:8060
+    uri:
+      modifySettleTrx: /bank/settle/partner/{0}/domain/{1}/transId/{0}
+  billpay:
+    host: http://localhost:8065
+    uri:
+      updateVietinTrx: /billpay/settle/vietin/updateTrx
+      createVietinTrx: /billpay/settle/vietin/createTrx
+
+security:
+  oauth2:
+    resource:
+      userInfoUri: http://onefin-oauth2.onefin.in/user
+      additionalUri: http://onefin-oauth2.onefin.in/oauth/{token}/get/additionalInfo
+
+asc:
+  mailReport:
+    midSplitTransByAccount: 'VN0010000000041'
+    mcodeSplitTransByAccount: '00035'
+
+batchUpdate:
+  size: 500

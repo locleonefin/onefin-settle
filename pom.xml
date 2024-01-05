@@ -1,0 +1,74 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.onefin.ewallet.settlement</groupId>
+	<artifactId>conn-ewallet-settlement</artifactId>
+	<version>1.0.1</version>
+	<name>Connector Ewallet Settlement</name>
+	<description></description>
+
+	<parent>
+		<groupId>com.onefin.ewallet</groupId>
+		<artifactId>conn-ewallet-common</artifactId>
+		<version>1.0.0</version>
+	</parent>
+
+	<properties>
+		<java.version>1.8</java.version>
+		<common-base.version>1.0.1</common-base.version>
+		<common-quartz.version>1.0.1</common-quartz.version>
+		<oauth2-autoconfig.version>2.0.0.RELEASE</oauth2-autoconfig.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>com.onefin.ewallet.common</groupId>
+			<artifactId>common-base</artifactId>
+			<version>${common-base.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.onefin.ewallet.common</groupId>
+			<artifactId>common-quartz</artifactId>
+			<version>${common-quartz.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-integration</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.integration</groupId>
+			<artifactId>spring-integration-sftp</artifactId>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk16 -->
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk16</artifactId>
+			<version>1.45</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security.oauth.boot</groupId>
+			<artifactId>spring-security-oauth2-autoconfigure</artifactId>
+			<version>${oauth2-autoconfig.version}</version>
+		</dependency>
+	</dependencies>
+	<build>
+		<finalName>main</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<skipTests>true</skipTests>
+					<encoding>UTF-8</encoding>
+					<source>${maven.compiler.source}</source>
+					<target>${maven.compiler.target}</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

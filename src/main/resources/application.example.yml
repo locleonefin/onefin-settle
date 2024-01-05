@@ -1,0 +1,266 @@
+server:
+  port: 8064
+
+spring:
+  datasource:
+    #    url: jdbc:mariadb://localhost:3306/onefinbanks
+    #    username: root
+    #    password: ROOT
+    url: jdbc:mariadb://172.16.14.103:3306/onefinbanks
+    username: onefin01
+    password: Matkhau@1
+    driver-class-name: org.mariadb.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MariaDBDialect
+    show-sql: false
+    hibernate:
+      ddl-auto: none
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
+    properties:
+      org:
+        quartz:
+          scheduler:
+            instanceId: AUTO
+            instanceName: connector-settlement #Unique
+          jobStore:
+            class: org.quartz.impl.jdbcjobstore.JobStoreTX
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+            useProperties: false
+            tablePrefix: QRTZ_
+            misfireThreshold: 1000
+            clusterCheckinInterval: 5000
+            isClustered: true
+          threadPool:
+            class: org.quartz.simpl.SimpleThreadPool
+            threadCount: 25
+            threadPriority: 5
+            threadsInheritContextClassLoaderOfInitializingThread: true
+
+proxy:
+  active: false
+  host: 172.16.14.101
+  port: 3128
+  activeAuth: false
+  userName:
+  password:
+
+sftp:
+  vietin:
+    link_bank:
+      host: 172.16.14.101
+      port: 22
+      username: sftp_vietinbank
+      password: _3i6A4Cz
+      directory:
+        remoteOut: /files/VIETINBANK_OUT/
+        remoteIn: /files/VIETINBANK_IN/
+        remoteBackup: /files/VIETINBANK_BACKUP/
+        storeFile: E:\\SETTLEMENT\\VIETIN_EWALLET1\\
+    billpay:
+      host: 172.16.14.101
+      port: 22
+      username: sftp_vietinbank
+      password: _3i6A4Cz
+      directory:
+        remoteOut: /files/VIETINBANK_OUT/
+        remoteIn: /files/VIETINBANK_IN/
+        remoteBackup: /files/VIETINBANK_BACKUP/
+        storeFile: E:\\SETTLEMENT\\VIETIN_BILLPAY\\
+    disbursement:
+      host: 172.16.14.101
+      port: 22
+      username: sftp_vietinbank
+      password: _3i6A4Cz
+      directory:
+        remoteOut: /files/VIETINBANK_OUT/
+        remoteIn: /files/VIETINBANK_IN/
+        remoteBackup: /files/VIETINBANK_BACKUP/
+        storeFile: E:\\SETTLEMENT\\VIETIN_DISBURSEMENT\\
+    virtualAcct:
+      host: 172.16.14.101
+      port: 22
+      username: sftp_vietinbank
+      password: _3i6A4Cz
+      directory:
+        remoteOut: /files/VIETINBANK_OUT/
+        remoteIn: /files/VIETINBANK_IN/
+        remoteBackup: /files/VIETINBANK_BACKUP/
+        storeFile: E:\\SETTLEMENT\\VIETIN_DISBURSEMENT\\
+  napas:
+    ce:
+      host: 172.16.14.101
+      port: 2443
+      username: onefin
+      password: gYrsUv#3
+      directory:
+        ofPrivateKey: E:\OneFin\source_code\OF_ewallet\conn-ewallet-settlement\src\main\resources\keys\ONEFIN_PGP_Privatekeys.pem
+        napasPublicKey: E:\OneFin\source_code\OF_ewallet\conn-ewallet-settlement\src\main\resources\keys\public01.cer
+        remoteOut: /ECOM/Outbox/
+        remoteIn: /ECOM/Inbox/
+        storeFile: E:\\OneFin\\SETTLEMENT\\NAPAS_EWALLET\\
+    ew:
+      host: 172.16.14.101
+      port: 2443
+      username: onefin
+      password: gYrsUv#3
+      directory:
+        ofPrivateKey: E:\OneFin\source_code\OF_ewallet\conn-ewallet-settlement\src\main\resources\keys\ONEFIN_PGP_Privatekeys.pem
+        napasPublicKey: E:\OneFin\source_code\OF_ewallet\conn-ewallet-settlement\src\main\resources\keys\public01.cer
+        remoteOut: /ECOM/Outbox/
+        remoteIn: /ECOM/Inbox/
+        storeFile: E:\\OneFin\\SETTLEMENT\\NAPAS_EWALLET\\
+  vnpay:
+    airtime:
+      storeFile: E:\\SETTLEMENT\\VNPAY_AIRTIME\\
+      templateFile: ./src/main/resources/BBĐS OF-VNPay.xlsx
+    sms:
+      storeFile: E:\\SETTLEMENT\\VNPAY_SMS\\
+  merchant:
+    paydi:
+      host: 172.16.14.101
+      port: 22
+      username: sftp_paydi
+      password: tqrV7mviq7Zj
+      directory:
+        remoteIn: /files/PAYDI_IN/
+        remoteBackup: /files/PAYDI_BACKUP/
+        remoteOut: /files/PAYDI_OUT/
+        storeFile: E:\\OneFin\\SETTLEMENT\\PAYDI\\
+
+settlement:
+  baseUrl: http://minio-in.onefin.vn:9090/object-browser/
+  minioBucket: ewallet-settlement-file
+  ofReceiver: tttt@onefin.vn
+  vietin:
+    link_bank:
+      privateKeyChecksum: 123456
+      providerName: ONEFIN
+      recordTypeDetail: '0002'
+      recordTypeEnd: '0009'
+      rcReconcileOK: '00'
+      msgTypePayment: '1210'
+      msgTypeRefund: '1402'
+      msgTypeCashout: '1610'
+      vt0OF1: '01'
+      vt1OF0: '02'
+      vtOFFail: '03'
+      defaultExecuteUser: OneFin
+      minioDefaultFolder: /VIETIN_LINKBANK/
+      settleCompletedBefore: '12:00:00'
+    billpay:
+      privateKeyChecksum: KEYTEST
+      providerName: ONEFIN
+      providerId: 196
+      merchantId: 1960
+      recordType: '002'
+      reconsolidateRecordType: '003'
+      endRecordType: '009'
+      successStatus: '00'
+      minioDefaultFolder: /VIETIN_BILLPAY/
+      settleCompletedBefore: '12:00:00'
+    disbursement:
+      privateKeyChecksum: KEYTEST
+      providerName: ONEFIN
+      providerId: 777
+      merchantId: 777
+      recordType: '002'
+      reconsolidateRecordType: '003'
+      endRecordType: '009'
+      reconcile_00: '00'
+      reconcile_01: '01'
+      reconcile_02: '02'
+      reconcile_03: '03'
+      reconcile_04: '04'
+      minioDefaultFolder: /VIETIN_DISBURSEMENT/
+      settleCompletedBefore: '12:00:00'
+    virtualAcct:
+      privateKeyChecksum: KEYTEST
+      providerName: ONEFIN
+      providerId: 777
+      merchantId: 777
+      recordType: '002'
+      reconsolidateRecordType: '003'
+      endRecordType: '009'
+      reconcile_00: '00'
+      reconcile_01: '01'
+      reconcile_02: '02'
+      reconcile_03: '03'
+      reconcile_04: '04'
+      minioDefaultFolder: /VIETIN_DISBURSEMENT/
+      settleCompletedBefore: '12:00:00'
+  napas:
+    ce:
+      zzz: ACQ
+      bbb: ONEFINCE
+      tctvCode: 971037
+      settleOrder: 1
+      settleFileTypeTC: TC
+      settleFileTypeSL: SL
+      settleFileTypeXL: XL
+      serviceCodeEcom: ECOM
+      defaultExecuteUser: OneFin
+      gdBH: '0117'
+      gdHTTP: '0115'
+      gdHTBP: '0114'
+      minioDefaultFolder: /NAPAS_EWALLET/
+    ew:
+      zzz: ACQ
+      bbbWL1: ONEFINWL1
+      bbbWL2: ONEFINWL2
+      bbbWL3: ONEFINWL3
+      tctvCode: 971037
+      settleOrder: 1
+      settleFileTypeTC: TC
+      settleFileTypeSL: SL
+      settleFileTypeXL: XL
+      serviceCodeEcom: ECOM
+      defaultExecuteUser: OneFin
+      gdBH: '0117'
+      gdHTTP: '0115'
+      gdHTBP: '0114'
+      minioDefaultFolder: /NAPAS_EWALLET/
+  vnpay:
+    airtime:
+      pendingCode: '08'
+      successCode: '00'
+      minioDefaultFolder: /VNPAY_AIRTIME/
+    sms:
+      successCode: SUCCESS
+      minioDefaultFolder: /VNPAY_SMS/
+  merchant:
+    paydi:
+      privateKeyChecksum: 123456
+      recordTypeDetail: '0002'
+      recordTypeEnd: '0009'
+      rcReconcileOK: '00'
+      rcReconcileFail: '01'
+      settleCompletedBefore: '11:00:00'
+
+minio:
+  host: https://minio-in.onefin.vn:9000
+  accessKey: minio
+  secretKey: minio123
+
+conn-service:
+  utility:
+    host: http://localhost:8062
+    path:
+      notify: /utilities/notifications/email/{templateId}
+  bank:
+    host: http://localhost:8060
+    path:
+      modifySettleTrx: /bank/settle/partner/{0}/domain/{1}/transId/{0}
+  billpay:
+    host: http://localhost:8065
+    path:
+      updateVietinTrx: /billpay/settle/vietin/updateTrx
+      createVietinTrx: /billpay/settle/vietin/createTrx
+
+security:
+  oauth2:
+    resource:
+      userInfoUri: http://localhost:3030/user
+      additionalUri: http://localhost:3030/oauth/{token}/get/additionalInfo

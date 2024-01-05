@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30" packages="com.onefin.ewallet.common.base.log">
+    <Properties>
+        <Property name="LOG_PATTERN">
+           %clr{%d{yyyy-MM-dd HH:mm:ss}{Asia/Ho_Chi_Minh}}{blue} %clr{%5p} %clr{---}{faint} [%15.15t] %clr{%-40.40c{1.}}{green} %clr{:}{faint} %m%n%xwEx
+        </Property>
+    </Properties>
+    <CustomLevels>
+        <!-- log info without truncated -->
+        <CustomLevel name="INFOWT" intLevel="355" />
+        <CustomLevel name="WARNWT" intLevel="255" />
+        <CustomLevel name="ERRORWT" intLevel="155" />
+    </CustomLevels>
+    <Appenders>
+        <Console name="ConsoleAppender" target="SYSTEM_OUT" follow="true">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+        <Rewrite name="rewrite">
+            <LogInterceptor ></LogInterceptor>
+            <AppenderRef ref="ConsoleAppender"></AppenderRef>
+        </Rewrite>
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+            <AppenderRef ref="rewrite" />
+        </Root>
+    </Loggers>
+</Configuration>
