@@ -31,6 +31,7 @@ import com.onefin.ewallet.settlement.service.ConfigLoader;
 import com.onefin.ewallet.settlement.service.MinioService;
 import com.onefin.ewallet.settlement.service.SettleService;
 import com.opencsv.bean.CsvToBeanBuilder;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.input.BOMInputStream;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -53,7 +54,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.integration.sftp.session.SftpRemoteFileTemplate;
 import org.springframework.stereotype.Service;
-import org.apache.commons.io.FilenameUtils;
 
 import java.io.*;
 import java.lang.reflect.Field;
@@ -63,7 +63,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -331,9 +334,9 @@ public class BVBankReconciliation {
 				// Create a row for the header
 				Row headerRow = (sheet.getRow(rowIndex) == null)
 						? sheet.createRow(rowIndex) : sheet.getRow(rowIndex);
-				for (SettleConstants.BVBankReconciliationField e:
+				for (SettleConstants.BVBankReconciliationField e :
 						SettleConstants.BVBankReconciliationField.stream().collect(Collectors.toList())) {
-					cellData = headerRow.createCell(e.getIndex()+2);
+					cellData = headerRow.createCell(e.getIndex() + 2);
 					cellData.setCellValue(e.getField());
 					cellData.setCellStyle(style);
 				}
@@ -352,7 +355,7 @@ public class BVBankReconciliation {
 					stt += 1;
 					// Create a row for the header
 					setCellFromReconciliationDto(
-							e, rowData, cellData, sheet, rowIndex, style, stt,0
+							e, rowData, cellData, sheet, rowIndex, style, stt, 0
 					);
 					rowIndex = rowIndex + 1;
 					lastRowIndex = rowIndex - 1;
@@ -397,7 +400,7 @@ public class BVBankReconciliation {
 				for (VietinNotifyTransTable e : vietinNotifyTransTableListMisMatch) {
 					stt += 1;
 					setCellFromVietinNotifyTransTable(
-							e,rowData, cellData, sheet, rowIndex, style, stt, 0
+							e, rowData, cellData, sheet, rowIndex, style, stt, 0
 					);
 					rowIndex = rowIndex + 1;
 					lastRowIndex = rowIndex - 1;
@@ -465,7 +468,7 @@ public class BVBankReconciliation {
 				reconciliationProcessDto.setFileTitle(fileTitle);
 				reconciliationProcessDto.setReconciliationDate(reconciliationDate);
 				reconciliationProcessDto.setMissMatch(true);
-				if (isGetByte){
+				if (isGetByte) {
 					reconciliationProcessDto.setOutputStreamXslx(outputStreamXslx);
 				}
 				return reconciliationProcessDto;
@@ -491,8 +494,8 @@ public class BVBankReconciliation {
 	}
 
 	public ReconciliationProcessDto buildBVBTransList(List<ReconciliationDto> reconciliationDtoList,
-												Date currentTime,
-												Date dateFile, String fileTitle,
+													  Date currentTime,
+													  Date dateFile, String fileTitle,
 													  boolean isGetByte) throws IOException {
 
 		InputStream templateInputStream = null;
@@ -536,9 +539,9 @@ public class BVBankReconciliation {
 			// Create a row for the header
 			Row headerRow = (sheet.getRow(rowIndex) == null)
 					? sheet.createRow(rowIndex) : sheet.getRow(rowIndex);
-			for (SettleConstants.BVBankReconciliationField e:
+			for (SettleConstants.BVBankReconciliationField e :
 					SettleConstants.BVBankReconciliationField.stream().collect(Collectors.toList())) {
-				cellData = headerRow.createCell(e.getIndex()+1);
+				cellData = headerRow.createCell(e.getIndex() + 1);
 				cellData.setCellValue(e.getField());
 				cellData.setCellStyle(style);
 			}
@@ -550,16 +553,16 @@ public class BVBankReconciliation {
 				stt += 1;
 				// Create a row for the header
 				setCellFromReconciliationDto(
-						e, rowData, cellData, sheet, rowIndex, style, stt,-1
+						e, rowData, cellData, sheet, rowIndex, style, stt, -1
 				);
 				rowIndex = rowIndex + 1;
 			}
 			int endRow = rowIndex;
 			// Set Total Transaction amount
 			// Formula Evaluator
-			FormulaEvaluator  formulaEvaluator =
+			FormulaEvaluator formulaEvaluator =
 					workbook.getCreationHelper().createFormulaEvaluator();
-			String formulaString = String.format("SUM(G%d:G%d)",startRow+1,endRow);
+			String formulaString = String.format("SUM(G%d:G%d)", startRow + 1, endRow);
 			rowData =
 					(sheet.getRow(3) == null) ?
 							sheet.createRow(3) : sheet.getRow(3);
@@ -576,7 +579,6 @@ public class BVBankReconciliation {
 			cellData.setCellStyle(style);
 
 
-
 			// Convert the Workbook to a byte array
 			ByteArrayOutputStream outputStreamXslx = new ByteArrayOutputStream();
 			workbook.write(outputStreamXslx);
@@ -589,7 +591,7 @@ public class BVBankReconciliation {
 					= dateTimeHelper.parseDate2String(currentTime,
 					DomainConstants.DATE_FORMAT_TRANS3);
 			String fileLocation = OneFinConstants.PARTNER_BVBANK + "/EMAIL_RECONCILIATION_EXPORT_BVB/"
-				+ MinioSavedFolder + OneFinConstants.SLASH + filenameSaved;
+					+ MinioSavedFolder + OneFinConstants.SLASH + filenameSaved;
 			minioService.uploadByte(env.getProperty("minio.bvbReconciliationBucket"),
 					fileLocation,
 					outputStreamXslx.toByteArray(),
@@ -600,7 +602,7 @@ public class BVBankReconciliation {
 			reconciliationProcessDto.setFileLocation(fileLocation);
 			reconciliationProcessDto.setFileTitle(fileTitle);
 			reconciliationProcessDto.setReconciliationDate(reconciliationDate);
-			if (isGetByte){
+			if (isGetByte) {
 				reconciliationProcessDto.setOutputStreamXslx(outputStreamXslx);
 			}
 			reconciliationProcessDto.setReconciliationDtos(reconciliationDtoList);
@@ -622,7 +624,6 @@ public class BVBankReconciliation {
 	}
 
 
-
 	private int setCellFromReconciliationDto(
 			ReconciliationDto e,
 			Row rowData,
@@ -632,13 +633,13 @@ public class BVBankReconciliation {
 			CellStyle style,
 			int stt,
 			int startColumnIndex
-	){
+	) {
 		rowData = (sheet.getRow(rowIndex) == null)
 				? sheet.createRow(rowIndex) : sheet.getRow(rowIndex);
-		if (startColumnIndex < 0 ){
+		if (startColumnIndex < 0) {
 			cellData = (rowData.getCell(0) == null)
 					? rowData.createCell(0) : rowData.getCell(0);
-		}else{
+		} else {
 			cellData = (rowData.getCell(startColumnIndex) == null)
 					? rowData.createCell(startColumnIndex) : rowData.getCell(startColumnIndex);
 			cellData = (rowData.getCell(startColumnIndex + 1) == null)
@@ -692,7 +693,6 @@ public class BVBankReconciliation {
 	}
 
 
-
 	private void setCellFromVietinNotifyTransTable(
 			VietinNotifyTransTable e,
 			Row rowData,
@@ -703,16 +703,16 @@ public class BVBankReconciliation {
 			int stt,
 			int startColumnIndex
 
-	){
+	) {
 		ReconciliationDtoExport reconciliationDtoExport
 				= modelMapper.map(e, ReconciliationDtoExport.class);
 		rowData = (sheet.getRow(rowIndex) == null)
 				? sheet.createRow(rowIndex) : sheet.getRow(rowIndex);
-		if (startColumnIndex < 0 ){
+		if (startColumnIndex < 0) {
 			cellData = (rowData.getCell(0) == null)
 					? rowData.createCell(0)
 					: rowData.getCell(0);
-		}else{
+		} else {
 			cellData = (rowData.getCell(startColumnIndex) == null)
 					? rowData.createCell(startColumnIndex)
 					: rowData.getCell(startColumnIndex);
@@ -826,7 +826,7 @@ public class BVBankReconciliation {
 //						);
 						ReconciliationProcessDto fileContent =
 								compareList(reconciliationDtoList, executeDate,
-										currentDate, fileSFTPName,false);
+										currentDate, fileSFTPName, false);
 						if (fileContent != null) {
 							reconciliationProcessDtoAtomicReference.set(fileContent);
 						} else {
@@ -873,7 +873,7 @@ public class BVBankReconciliation {
 //						);
 						ReconciliationProcessDto fileContent =
 								buildBVBTransList(reconciliationDtoList, currentTime.toDate(),
-										currentDate, fileSFTPName,false);
+										currentDate, fileSFTPName, false);
 						if (fileContent != null) {
 							reconciliationProcessDtoAtomicReference.set(fileContent);
 						} else {
@@ -943,7 +943,7 @@ public class BVBankReconciliation {
 						reconciliationProcessDtoAtomicReference.set(reconciliationDtoList);
 					});
 		} catch (Exception e) {
-			LOGGER.error("Error occurred: ",e);
+			LOGGER.error("Error occurred: ", e);
 			return new ArrayList<>();
 		}
 		return reconciliationProcessDtoAtomicReference.get();
@@ -959,7 +959,7 @@ public class BVBankReconciliation {
 
 		List<VietinNotifyTransTable> vietinNotifyTransTableListMgB
 				= vietinNotifyTransTableRepo.findByFromDateToDateMsB(
-						dateTimeHelper.getBeginingOfDate(fromDate),
+				dateTimeHelper.getBeginingOfDate(fromDate),
 				dateTimeHelper.getEndOfDate(toDate),
 				OneFinConstants.BankListQrService.VCCB.getBankCode());
 
@@ -1013,9 +1013,9 @@ public class BVBankReconciliation {
 
 			// Create a row for the header
 			Row headerRow = (sheet.getRow(rowIndex) == null) ? sheet.createRow(rowIndex) : sheet.getRow(rowIndex);
-			for (SettleConstants.BVBankReconciliationField e:
+			for (SettleConstants.BVBankReconciliationField e :
 					SettleConstants.BVBankReconciliationField.stream().collect(Collectors.toList())) {
-				cellData = headerRow.createCell(e.getIndex()+1);
+				cellData = headerRow.createCell(e.getIndex() + 1);
 				cellData.setCellValue(e.getField());
 				cellData.setCellStyle(style);
 			}
@@ -1027,7 +1027,7 @@ public class BVBankReconciliation {
 			for (VietinNotifyTransTable e : vietinNotifyTransTableListMgB) {
 				sst += 1;
 				setCellFromVietinNotifyTransTable(
-					e,rowData, cellData, sheet, rowIndex, style,sst,-1
+						e, rowData, cellData, sheet, rowIndex, style, sst, -1
 				);
 
 				rowIndex = rowIndex + 1;
@@ -1067,9 +1067,9 @@ public class BVBankReconciliation {
 
 			// Create a row for the header
 			headerRow = (sheet.getRow(rowIndex) == null) ? sheet.createRow(rowIndex) : sheet.getRow(rowIndex);
-			for (SettleConstants.BVBankReconciliationField e:
+			for (SettleConstants.BVBankReconciliationField e :
 					SettleConstants.BVBankReconciliationField.stream().collect(Collectors.toList())) {
-				cellData = headerRow.createCell(e.getIndex()+1);
+				cellData = headerRow.createCell(e.getIndex() + 1);
 				cellData.setCellValue(e.getField());
 				cellData.setCellStyle(style);
 			}
@@ -1083,7 +1083,7 @@ public class BVBankReconciliation {
 						= modelMapper.map(e, ReconciliationDtoExport.class);
 				sst += 1;
 				setCellFromVietinNotifyTransTable(
-						e,rowData, cellData, sheet, rowIndex,  style, sst, -1
+						e, rowData, cellData, sheet, rowIndex, style, sst, -1
 				);
 				rowIndex = rowIndex + 1;
 				lastRowIndex = rowIndex - 1;
@@ -1093,15 +1093,15 @@ public class BVBankReconciliation {
 			// Get the file extension
 
 			String fileNameMsgB = env.getProperty("sftp.bvbank.virtualAcct.fileNamePrefix")
-					+ fromDateString+"_"+toDateString +"_MsgB_" + ".xlsx";
+					+ fromDateString + "_" + toDateString + "_MsgB_" + ".xlsx";
 			String fileNameMsgI = env.getProperty("sftp.bvbank.virtualAcct.fileNamePrefix")
-					+ fromDateString+"_"+toDateString +"_MsgI_" + ".xlsx";
+					+ fromDateString + "_" + toDateString + "_MsgI_" + ".xlsx";
 			LOGGER.info("File saved: {}", fileNameMsgB);
 			LOGGER.info("File saved: {}", fileNameMsgI);
 			String fileLocationB = OneFinConstants.PARTNER_BVBANK + "/EMAIL_RECONCILIATION_EXPORT/"
-					+ fromDateString+"_"+ toDateString + "/"+ fileNameMsgB;
+					+ fromDateString + "_" + toDateString + "/" + fileNameMsgB;
 			String fileLocationI = OneFinConstants.PARTNER_BVBANK + "/EMAIL_RECONCILIATION_EXPORT/"
-					+ fromDateString+"_"+ toDateString + "/"+ fileNameMsgI;
+					+ fromDateString + "_" + toDateString + "/" + fileNameMsgI;
 			minioService.uploadByte(env.getProperty("minio.bvbReconciliationBucket"),
 					fileLocationB,
 					outputStreamXslxB.toByteArray(),
@@ -1111,8 +1111,8 @@ public class BVBankReconciliation {
 					outputStreamXslxI.toByteArray(),
 					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
-		}catch (Exception ex){
-			LOGGER.error("Error occurred",ex);
+		} catch (Exception ex) {
+			LOGGER.error("Error occurred", ex);
 		}
 	}
 
@@ -1132,7 +1132,7 @@ public class BVBankReconciliation {
 	}
 
 
-	public void executeManually(String executeDate,String emailSend,String emailCC) {
+	public void executeManually(String executeDate, String emailSend, String emailCC) {
 		List<Date> reconciliationDate = new ArrayList<>();
 		DateTime currentTime = dateTimeHelper.parseDate(executeDate,
 				OneFinConstants.HO_CHI_MINH_TIME_ZONE,
@@ -1196,7 +1196,7 @@ public class BVBankReconciliation {
 			throw new RuntimeException(e);
 		}
 
-		boolean isSuccess = sendReconciliationEmail(reconciliationDate, currentTime,emailSend, emailCC);
+		boolean isSuccess = sendReconciliationEmail(reconciliationDate, currentTime, emailSend, emailCC);
 		if (isSuccess) {
 			try {
 				trans.setStatus(SettleConstants.SETTLEMENT_SUCCESS);
@@ -1276,7 +1276,7 @@ public class BVBankReconciliation {
 			throw new RuntimeException(e);
 		}
 
-		boolean isSuccess = sendBVBTransExportEmail(reconciliationDate,currentTime, emailSend, emailCC);
+		boolean isSuccess = sendBVBTransExportEmail(reconciliationDate, currentTime, emailSend, emailCC);
 		if (isSuccess) {
 			try {
 				trans.setStatus(SettleConstants.SETTLEMENT_SUCCESS);
@@ -1294,7 +1294,7 @@ public class BVBankReconciliation {
 	}
 
 	public void executeBVBTransExportFromDateToDateManually(String fromDateString,
-			String toDateString, String emailSend, String emailCC) throws IOException {
+															String toDateString, String emailSend, String emailCC) throws IOException {
 
 		DateTime fromDate = dateTimeHelper.parseDate(fromDateString,
 				OneFinConstants.HO_CHI_MINH_TIME_ZONE,
@@ -1306,11 +1306,11 @@ public class BVBankReconciliation {
 		);
 
 		List<Date> listDateHourDiff
-				= dateTimeHelper.hoursDiff(fromDate.toDate(),toDate.toDate() );
+				= dateTimeHelper.hoursDiff(fromDate.toDate(), toDate.toDate());
 
 		boolean isSuccess = sendBVBTransExportFromDateToDateEmail(listDateHourDiff,
 				emailSend, emailCC);
-		if (isSuccess){
+		if (isSuccess) {
 			LOGGER.info("Exportation successfully");
 		}
 
@@ -1318,7 +1318,7 @@ public class BVBankReconciliation {
 	}
 
 	public void executeBVBTransExportFromDateToDateFullManually(String fromDateString,
-															String toDateString,
+																String toDateString,
 																String emailSend,
 																String emailCC) throws IOException {
 
@@ -1332,20 +1332,29 @@ public class BVBankReconciliation {
 		);
 
 		List<Date> listDate
-				= dateTimeHelper.dateDiff(fromDate.toDate(),toDate.toDate() );
+				= dateTimeHelper.dateDiff(fromDate.toDate(), toDate.toDate());
 
 		boolean isSuccess = sendBVBTransExportFromDateToDateFullEmail(listDate,
 				emailSend, emailCC);
-		if (isSuccess){
+		if (isSuccess) {
 			LOGGER.info("Exportation successfully");
 		}
 
 
 	}
 
+	public void executeBVBTransExportByBankCodeAndCreatedDate(String createdDateString, String bankCodeString) throws IOException {
+		DateTime createdDate = dateTimeHelper.parseDate(createdDateString,
+				OneFinConstants.HO_CHI_MINH_TIME_ZONE,
+				OneFinConstants.DATE_FORMAT_dd_MM_yyyy
+		);
+
+//		boolean isSuccess =
+	}
+
 	public boolean sendReconciliationEmail(
 			List<Date> reconciliationListDate,
-		   	DateTime currentDate,String emailSend, String emailSendCC) {
+			DateTime currentDate, String emailSend, String emailSendCC) {
 
 		List<ReconciliationProcessDto> reconciliationProcessDtoList = new ArrayList<>();
 		reconciliationListDate.forEach(
@@ -1377,7 +1386,7 @@ public class BVBankReconciliation {
 						.collect(Collectors.toList());
 				LOGGER.error("Reconciliation list contain error, no sending email and return false");
 				LOGGER.info("Error list");
-				reconciliationProcessDtoListError.forEach(e->LOGGER.info("{}",e));
+				reconciliationProcessDtoListError.forEach(e -> LOGGER.info("{}", e));
 				return false;
 			}
 			// Call api to send email
@@ -1416,7 +1425,7 @@ public class BVBankReconciliation {
 					reconciliationListDate.get(0)
 			);
 			Date fromDate = dateTimeHelper.getBeginingOfDate(
-					reconciliationListDate.get(reconciliationListDate.size()-1)
+					reconciliationListDate.get(reconciliationListDate.size() - 1)
 			);
 
 			String fromDateString = dateTimeHelper.parseDate2String(
@@ -1427,7 +1436,7 @@ public class BVBankReconciliation {
 			);
 
 			String emailTitle = "[ONEFIN - BVBANK] Phản hồi kết quả đối soát từ ngày "
-					+ fromDateString + " đến ngày "+ toDateString;
+					+ fromDateString + " đến ngày " + toDateString;
 
 
 			List<String> emailList = new ArrayList<>();
@@ -1435,7 +1444,7 @@ public class BVBankReconciliation {
 			List<String> emailBCC = new ArrayList<>();
 			emailList.addAll(Arrays.asList(emailSend.split(",")));
 			emailBCC.add("locle@onefin.vn");
-			if (emailSendCC!=null && !emailSendCC.isEmpty()){
+			if (emailSendCC != null && !emailSendCC.isEmpty()) {
 				emailCC.addAll(Arrays.asList(emailSendCC.split(",")));
 			}
 
@@ -1480,7 +1489,7 @@ public class BVBankReconciliation {
 				reconciliationListDate.get(0)
 		);
 		Date fromDate = dateTimeHelper.getBeginingOfDate(
-				reconciliationListDate.get(reconciliationListDate.size()-1)
+				reconciliationListDate.get(reconciliationListDate.size() - 1)
 		);
 
 		String fromDateString = dateTimeHelper.parseDate2String(
@@ -1497,7 +1506,7 @@ public class BVBankReconciliation {
 				.collect(Collectors.toList());
 		List<ReconciliationDto> reconciliationDtoFull =
 				reconciliationProcessDtoListSort.stream()
-						.flatMap(e->e.getReconciliationDtos().stream())
+						.flatMap(e -> e.getReconciliationDtos().stream())
 						.sorted(Comparator.comparing(ReconciliationDto::getTransactionDate))
 						.collect(Collectors.toList());
 
@@ -1539,9 +1548,9 @@ public class BVBankReconciliation {
 			// Create a row for the header
 			Row headerRow = (sheet.getRow(rowIndex) == null)
 					? sheet.createRow(rowIndex) : sheet.getRow(rowIndex);
-			for (SettleConstants.BVBankReconciliationField e:
+			for (SettleConstants.BVBankReconciliationField e :
 					SettleConstants.BVBankReconciliationField.stream().collect(Collectors.toList())) {
-				cellData = headerRow.createCell(e.getIndex()+1);
+				cellData = headerRow.createCell(e.getIndex() + 1);
 				cellData.setCellValue(e.getField());
 				cellData.setCellStyle(style);
 			}
@@ -1553,16 +1562,16 @@ public class BVBankReconciliation {
 				stt += 1;
 				// Create a row for the header
 				setCellFromReconciliationDto(
-						e, rowData, cellData, sheet, rowIndex, style, stt,-1
+						e, rowData, cellData, sheet, rowIndex, style, stt, -1
 				);
 				rowIndex = rowIndex + 1;
 			}
 			int endRow = rowIndex;
 			// Set Total Transaction amount
 			// Formula Evaluator
-			FormulaEvaluator  formulaEvaluator =
+			FormulaEvaluator formulaEvaluator =
 					workbook.getCreationHelper().createFormulaEvaluator();
-			String formulaString = String.format("SUM(G%d:G%d)",startRow+1,endRow);
+			String formulaString = String.format("SUM(G%d:G%d)", startRow + 1, endRow);
 			rowData =
 					(sheet.getRow(3) == null) ?
 							sheet.createRow(3) : sheet.getRow(3);
@@ -1583,14 +1592,14 @@ public class BVBankReconciliation {
 			workbook.write(outputStreamXslx);
 
 			// Get the file extension
-			String filenameSaved = "VA_ONEFIN_ALL_"+ fromDateString+ "_"
-					+ toDateString+ "_FULL_EXPORT" + ".xlsx";
+			String filenameSaved = "VA_ONEFIN_ALL_" + fromDateString + "_"
+					+ toDateString + "_FULL_EXPORT" + ".xlsx";
 
 			LOGGER.info("File saved: {}", filenameSaved);
 			String MinioSavedFolder
 					= dateTimeHelper.parseDate2String(currentTime.toDate(),
 					DomainConstants.DATE_FORMAT_TRANS3);
-			 fileLocationFull = OneFinConstants.PARTNER_BVBANK + "/EMAIL_RECONCILIATION_EXPORT_BVB/"
+			fileLocationFull = OneFinConstants.PARTNER_BVBANK + "/EMAIL_RECONCILIATION_EXPORT_BVB/"
 					+ MinioSavedFolder + OneFinConstants.SLASH + filenameSaved;
 			minioService.uploadByte(env.getProperty("minio.bvbReconciliationBucket"),
 					fileLocationFull,
@@ -1621,7 +1630,7 @@ public class BVBankReconciliation {
 						.collect(Collectors.toList());
 				LOGGER.error("Reconciliation list contain error, no sending email and return false");
 				LOGGER.info("Error list");
-				reconciliationProcessDtoListError.forEach(e->LOGGER.info("{}",e));
+				reconciliationProcessDtoListError.forEach(e -> LOGGER.info("{}", e));
 				return false;
 			}
 			// Call api to send email
@@ -1629,7 +1638,7 @@ public class BVBankReconciliation {
 			payload.put("fromDate", fromDateString);
 			payload.put("toDate", toDateString);
 			List<String> attachList = new ArrayList<>();
-			if (!fileLocationFull.isEmpty()){
+			if (!fileLocationFull.isEmpty()) {
 				attachList.add(fileLocationFull);
 			}
 			for (ReconciliationProcessDto e : reconciliationProcessDtoList) {
@@ -1637,14 +1646,14 @@ public class BVBankReconciliation {
 			}
 
 			String emailTitle = "[ONEFIN - BVBANK] Danh sách giao dịch từ ngày "
-					+ fromDateString + " đến ngày "+ toDateString;
+					+ fromDateString + " đến ngày " + toDateString;
 
 			List<String> emailList = new ArrayList<>();
 			List<String> emailCC = new ArrayList<>();
 			List<String> emailBCC = new ArrayList<>();
 			emailList.addAll(Arrays.asList(emailSend.split(",")));
 //			emailBCC.add("locle@onefin.vn");
-			if (emailSendCC!=null && !emailSendCC.isEmpty()){
+			if (emailSendCC != null && !emailSendCC.isEmpty()) {
 				emailCC.addAll(Arrays.asList(emailSendCC.split(",")));
 			}
 
@@ -1682,7 +1691,7 @@ public class BVBankReconciliation {
 		);
 
 		Date toDate = new DateTime(
-				(reconciliationListDate.get(reconciliationListDate.size()-1))).minusHours(1).minusSeconds(1).toDate();
+				(reconciliationListDate.get(reconciliationListDate.size() - 1))).minusHours(1).minusSeconds(1).toDate();
 
 		Date fromDate = new DateTime(
 				(reconciliationListDate.get(0))).minusHours(1).toDate();
@@ -1735,9 +1744,9 @@ public class BVBankReconciliation {
 			// Create a row for the header
 			Row headerRow = (sheet.getRow(rowIndex) == null)
 					? sheet.createRow(rowIndex) : sheet.getRow(rowIndex);
-			for (SettleConstants.BVBankReconciliationField e:
+			for (SettleConstants.BVBankReconciliationField e :
 					SettleConstants.BVBankReconciliationField.stream().collect(Collectors.toList())) {
-				cellData = headerRow.createCell(e.getIndex()+1);
+				cellData = headerRow.createCell(e.getIndex() + 1);
 				cellData.setCellValue(e.getField());
 				cellData.setCellStyle(style);
 			}
@@ -1749,16 +1758,16 @@ public class BVBankReconciliation {
 				stt += 1;
 				// Create a row for the header
 				setCellFromReconciliationDto(
-						e, rowData, cellData, sheet, rowIndex, style, stt,-1
+						e, rowData, cellData, sheet, rowIndex, style, stt, -1
 				);
 				rowIndex = rowIndex + 1;
 			}
 			int endRow = rowIndex;
 			// Set Total Transaction amount
 			// Formula Evaluator
-			FormulaEvaluator  formulaEvaluator =
+			FormulaEvaluator formulaEvaluator =
 					workbook.getCreationHelper().createFormulaEvaluator();
-			String formulaString = String.format("SUM(G%d:G%d)",startRow+1,endRow);
+			String formulaString = String.format("SUM(G%d:G%d)", startRow + 1, endRow);
 			rowData =
 					(sheet.getRow(3) == null) ?
 							sheet.createRow(3) : sheet.getRow(3);
@@ -1775,16 +1784,15 @@ public class BVBankReconciliation {
 			cellData.setCellStyle(style);
 
 
-
 			// Convert the Workbook to a byte array
 			ByteArrayOutputStream outputStreamXslx = new ByteArrayOutputStream();
 			workbook.write(outputStreamXslx);
 
 			// Get the file extension
-			String filenameSaved = "VA_ONEFIN_"+ dateTimeHelper.parseDate2String(
+			String filenameSaved = "VA_ONEFIN_" + dateTimeHelper.parseDate2String(
 					fromDate, DomainConstants.DATE_FORMAT_TRANS11
-			)+ "_"
-					+  dateTimeHelper.parseDate2String(
+			) + "_"
+					+ dateTimeHelper.parseDate2String(
 					toDate, DomainConstants.DATE_FORMAT_TRANS11
 			) + ".xlsx";
 
@@ -1820,19 +1828,19 @@ public class BVBankReconciliation {
 			payload.put("fromDate", fromDateString);
 			payload.put("toDate", toDateString);
 			List<String> attachList = new ArrayList<>();
-			if (!fileLocationFull.isEmpty()){
+			if (!fileLocationFull.isEmpty()) {
 				attachList.add(fileLocationFull);
 			}
 
 			String emailTitle = "[ONEFIN - BVBANK] Danh sách giao dịch theo giờ từ "
-					+ fromDateString + " đến "+ toDateString;
+					+ fromDateString + " đến " + toDateString;
 
 			List<String> emailList = new ArrayList<>();
 			List<String> emailCC = new ArrayList<>();
 			List<String> emailBCC = new ArrayList<>();
 			emailList.addAll(Arrays.asList(emailSend.split(",")));
 //			emailBCC.add("locle@onefin.vn");
-			if (emailSendCC!=null && !emailSendCC.isEmpty()){
+			if (emailSendCC != null && !emailSendCC.isEmpty()) {
 				emailCC.addAll(Arrays.asList(emailSendCC.split(",")));
 			}
 
@@ -1870,7 +1878,7 @@ public class BVBankReconciliation {
 		);
 
 		Date toDate = new DateTime(
-				(reconciliationListDate.get(reconciliationListDate.size()-1))).toDate();
+				(reconciliationListDate.get(reconciliationListDate.size() - 1))).toDate();
 
 		Date fromDate = new DateTime(
 				(reconciliationListDate.get(0))).toDate();
@@ -1909,9 +1917,9 @@ public class BVBankReconciliation {
 			// Create a row for the header
 			Row headerRow = (sheet.getRow(rowIndex) == null)
 					? sheet.createRow(rowIndex) : sheet.getRow(rowIndex);
-			for (SettleConstants.BVBankReconciliationField e:
+			for (SettleConstants.BVBankReconciliationField e :
 					SettleConstants.BVBankReconciliationField.stream().collect(Collectors.toList())) {
-				cellData = headerRow.createCell(e.getIndex()+1);
+				cellData = headerRow.createCell(e.getIndex() + 1);
 				cellData.setCellValue(e.getField());
 				cellData.setCellStyle(style);
 			}
@@ -1922,7 +1930,7 @@ public class BVBankReconciliation {
 				stt += 1;
 				// Create a row for the header
 				totalAmount = totalAmount + setCellFromReconciliationDto(
-						e, rowData, cellData, sheet, rowIndex, style, stt,-1
+						e, rowData, cellData, sheet, rowIndex, style, stt, -1
 				);
 				rowIndex = rowIndex + 1;
 			}
@@ -1938,7 +1946,7 @@ public class BVBankReconciliation {
 
 			// Set date value
 			rowData = headerSheet.getRow(1);
-			if (rowData == null){
+			if (rowData == null) {
 				rowData = headerSheet.createRow(1);
 			}
 //			rowData = ( == null)
@@ -1973,17 +1981,17 @@ public class BVBankReconciliation {
 			workbook.write(outputStreamXslxTotal);
 
 			// Get the file extension
-			String filenameSaved = "VA_ONEFIN_ALL_"+ dateTimeHelper.parseDate2String(
+			String filenameSaved = "VA_ONEFIN_ALL_" + dateTimeHelper.parseDate2String(
 					fromDate, DomainConstants.DATE_FORMAT_TRANS5
-			)+ "_"
-					+  dateTimeHelper.parseDate2String(
+			) + "_"
+					+ dateTimeHelper.parseDate2String(
 					toDate, DomainConstants.DATE_FORMAT_TRANS5
 			) + ".xlsx";
 
-			String filenameSavedTotal = "VA_ONEFIN_ALL_"+ dateTimeHelper.parseDate2String(
+			String filenameSavedTotal = "VA_ONEFIN_ALL_" + dateTimeHelper.parseDate2String(
 					fromDate, DomainConstants.DATE_FORMAT_TRANS5
-			)+ "_"
-					+  dateTimeHelper.parseDate2String(
+			) + "_"
+					+ dateTimeHelper.parseDate2String(
 					toDate, DomainConstants.DATE_FORMAT_TRANS5
 			) + "_total.xlsx";
 
@@ -2032,23 +2040,23 @@ public class BVBankReconciliation {
 			payload.put("fromDate", fromDateString);
 			payload.put("toDate", toDateString);
 			List<String> attachList = new ArrayList<>();
-			if (!fileLocationFull.isEmpty()){
+			if (!fileLocationFull.isEmpty()) {
 				attachList.add(fileLocationFull);
 			}
 
-			if (!fileLocationFullTotal.isEmpty()){
+			if (!fileLocationFullTotal.isEmpty()) {
 				attachList.add(fileLocationFullTotal);
 			}
 
 			String emailTitle = "[ONEFIN - BVBANK] Danh sách giao dịch tổng hợp từ "
-					+ fromDateString + " đến "+ toDateString;
+					+ fromDateString + " đến " + toDateString;
 
 			List<String> emailList = new ArrayList<>();
 			List<String> emailCC = new ArrayList<>();
 			List<String> emailBCC = new ArrayList<>();
 			emailList.addAll(Arrays.asList(emailSend.split(",")));
 //			emailBCC.add("locle@onefin.vn");
-			if (emailSendCC!=null && !emailSendCC.isEmpty()){
+			if (emailSendCC != null && !emailSendCC.isEmpty()) {
 				emailCC.addAll(Arrays.asList(emailSendCC.split(",")));
 			}
 
@@ -2172,31 +2180,31 @@ public class BVBankReconciliation {
 				final AtomicInteger sublist = new AtomicInteger();
 				AtomicInteger count_row = new AtomicInteger();
 				CompletableFuture[] futures = bvbTransList.stream()
-					.collect(Collectors.groupingBy(t -> sublist.getAndIncrement() / batchSize))
-					.values()
-					.stream()
-					.map(ul -> CompletableFuture.runAsync(() -> {
-						IntStream.range(0, ul.size()).forEach(index -> {
-							int currentIndex = 0;
-							currentIndex = count_row.addAndGet(1);
-							try {
-								vietinNotifyTransTableList.parallelStream().forEach(
-									e -> {
-										if (e.getTransId().equals(ul.get(index).getExternalRefNo())) {
-											if (!queueReconciliation.contains(ul.get(index))) {
-												queueReconciliation.add(ul.get(index));
+						.collect(Collectors.groupingBy(t -> sublist.getAndIncrement() / batchSize))
+						.values()
+						.stream()
+						.map(ul -> CompletableFuture.runAsync(() -> {
+							IntStream.range(0, ul.size()).forEach(index -> {
+								int currentIndex = 0;
+								currentIndex = count_row.addAndGet(1);
+								try {
+									vietinNotifyTransTableList.parallelStream().forEach(
+											e -> {
+												if (e.getTransId().equals(ul.get(index).getExternalRefNo())) {
+													if (!queueReconciliation.contains(ul.get(index))) {
+														queueReconciliation.add(ul.get(index));
+													}
+													if (!queueVietinNotifyTransTable.contains(e)) {
+														queueVietinNotifyTransTable.add(e);
+													}
+												}
 											}
-											if (!queueVietinNotifyTransTable.contains(e)) {
-												queueVietinNotifyTransTable.add(e);
-											}
-										}
-									}
-								);
-							} catch (Exception ex) {
-								LOGGER.error(ex.getMessage(), ex);
-							}
-						});
-					}, executor)).toArray(CompletableFuture[]::new);
+									);
+								} catch (Exception ex) {
+									LOGGER.error(ex.getMessage(), ex);
+								}
+							});
+						}, executor)).toArray(CompletableFuture[]::new);
 				CompletableFuture<Void> run = CompletableFuture.allOf(futures);
 				run.get();
 
@@ -2205,17 +2213,17 @@ public class BVBankReconciliation {
 					LOGGER.info("Reconciliation successful");
 				} else {
 					List<ReconciliationMonthlyDetailDto> bvbTransListMisMatch =
-						bvbTransList.parallelStream()
-							.filter(e -> !queueReconciliation.contains(e))
-							.collect(Collectors.toList());
+							bvbTransList.parallelStream()
+									.filter(e -> !queueReconciliation.contains(e))
+									.collect(Collectors.toList());
 					bvbTransListMisMatch.forEach(e -> {
 						LOGGER.log(Level.getLevel("INFOWT"), "bvbTransList mis match: {}", e.getExternalRefNo());
 					});
 
 					List<VietinNotifyTransTable> vietinNotifyTransTableListMisMatch =
-						vietinNotifyTransTableList.parallelStream()
-							.filter(e -> !queueVietinNotifyTransTable.contains(e))
-							.collect(Collectors.toList());
+							vietinNotifyTransTableList.parallelStream()
+									.filter(e -> !queueVietinNotifyTransTable.contains(e))
+									.collect(Collectors.toList());
 					vietinNotifyTransTableListMisMatch.forEach(e -> {
 						LOGGER.log(Level.getLevel("INFOWT"), "vietinNotifyTransTableList mis match: {}", getReconciliationString(e));
 

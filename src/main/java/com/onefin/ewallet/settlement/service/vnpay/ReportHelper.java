@@ -1,18 +1,18 @@
 package com.onefin.ewallet.settlement.service.vnpay;
 
 import com.onefin.ewallet.common.base.constants.OneFinConstants;
+import com.onefin.ewallet.common.domain.bank.vietin.VietinVirtualAcctTransHistory;
 import com.onefin.ewallet.common.domain.base.AbstractBaseEwalletTrans;
 import com.onefin.ewallet.common.domain.billpay.imedia.IMediaBillPayTransaction;
 import com.onefin.ewallet.common.domain.billpay.vnpay.trans.VnpayTopupTransaction;
 import com.onefin.ewallet.common.domain.settlement.VietinBillReport;
 import com.onefin.ewallet.common.domain.settlement.VietinBillSummary;
+import com.onefin.ewallet.common.utility.date.DateTimeHelper;
 import com.onefin.ewallet.common.utility.file.ExcelHelper;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import java.io.FileNotFoundException;
@@ -29,11 +29,12 @@ import java.util.*;
 @Component
 public class ReportHelper extends ExcelHelper {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(ReportHelper.class);
-
 	// Sms
 	public static final int COLUMN_INDEX_TELCO = 0;
 	public static final int COLUMN_INDEX_NUMSMS = 1;
+	private static final Logger LOGGER = LoggerFactory.getLogger(ReportHelper.class);
+
+	private static DateTimeHelper dateTimeHelper;
 
 	/**
 	 * Write sms summary data to file
@@ -285,6 +286,7 @@ public class ReportHelper extends ExcelHelper {
 			}
 		}
 	}
+
 	private int writeImediaTrx(Sheet sheet, int rowIndex, IMediaBillPayTransaction trx, Class<?> clazz, NumberFormat currencyFormat) {
 		Map<String, String> fieldToHeaderMap = new LinkedHashMap<>();
 		fieldToHeaderMap.put("originalTransId", "Mã GD");
@@ -346,12 +348,12 @@ public class ReportHelper extends ExcelHelper {
 				Field field = getField(clazz, fieldName);
 				field.setAccessible(true);
 				Cell cell = getCell(row, cellIndex++);
-				if(fieldName.equals("localDateTime")){
+				if (fieldName.equals("localDateTime")) {
 					String dateStr = String.valueOf(field.get(trx));
 					LocalDateTime dateTime = LocalDateTime.parse(dateStr, inputFormatter);
 					String formattedDate = dateTime.format(outputFormatter);
 					cell.setCellValue(formattedDate);
-				}else {
+				} else {
 					Object fieldValue = field.get(trx);
 					cell.setCellValue(fieldValue != null ? String.valueOf(fieldValue) : "");
 				}
@@ -522,7 +524,7 @@ public class ReportHelper extends ExcelHelper {
 		rowIndex++;
 		return rowIndex;
 	}
-	
+
 
 	public void writeBillExcel(List<VietinBillReport> vietinBillReports, String excelFilePath) throws IOException {
 		Workbook workbook = null;
@@ -550,7 +552,7 @@ public class ReportHelper extends ExcelHelper {
 			workbook.close();
 		}
 	}
-	
+
 	public void writeBillSummaryExcel(
 			List<VietinBillSummary> vietinBillSummarys,
 			String excelFilePath) throws IOException {
@@ -580,6 +582,7 @@ public class ReportHelper extends ExcelHelper {
 		}
 	}
 
+
 	private int writeHeaderBillReport(Sheet sheet, int rowIndex, Class<?> clazz) {
 		Field[] fields = clazz.getDeclaredFields();
 		Row row = getRow(sheet, rowIndex);
@@ -607,7 +610,7 @@ public class ReportHelper extends ExcelHelper {
 		rowIndex++;
 		return rowIndex;
 	}
-	
+
 	private int writeBillSummaryReport(Sheet sheet, int rowIndex, VietinBillSummary trx, Class<?> clazz) {
 		Field[] fields = clazz.getDeclaredFields();
 		Row row = getRow(sheet, rowIndex);
@@ -624,4 +627,162 @@ public class ReportHelper extends ExcelHelper {
 		rowIndex++;
 		return rowIndex;
 	}
+
+	private int writeBillByBankCodeAndCreatedDate(Sheet sheet, int rowIndex, VietinVirtualAcctTransHistory trx, Class<?> clazz) {
+		Field[] fields = clazz.getDeclaredFields();
+		Row row = getRow(sheet, rowIndex);
+		for (int i = 0; i < fields.length; i++) {
+			Cell cell = getCell(row, i);
+			try {
+				Field field = trx.getClass().getDeclaredField(fields[i].getName());
+				field.setAccessible(true);
+				cell.setCellValue(String.valueOf(field.get(trx)));
+			} catch (Exception e) {
+				LOGGER.error(e.getMessage(), e);
+			}
+		}
+		rowIndex++;
+		return rowIndex;
+	}
+
+	public void writeExcelByBankCodeAndCreatedDate(List<VietinVirtualAcctTransHistory> trxDetails, String date, String excelFilePath) throws IOException {
+		Workbook workbook = null;
+		InputStream templateInputStream = null;
+		try {
+			// Load template file from resources folder
+			ClassLoader classLoader = getClass().getClassLoader();
+			templateInputStream = classLoader.getResourceAsStream("template.xlsx");
+			// If the template file isn't found in the resources folder, you can't proceed
+			if (templateInputStream == null) {
+				throw new FileNotFoundException("Template file not found in resources folder");
+			}
+			workbook = new XSSFWorkbook(templateInputStream);
+			// get the sheet from workbook
+			Sheet sheet = workbook.getSheetAt(0);
+			// write headers into the sheet at 7th row using modified writeHeaderTrx
+			int rowIndex = 6;  // since headers start from row 7 (0-based index)
+			rowIndex = writeHeaderExcel(sheet, rowIndex, VietinVirtualAcctTransHistory.class);
+			// write data into the sheet
+			int counter = 1;
+			NumberFormat currencyFormat = NumberFormat.getNumberInstance();
+			currencyFormat.setGroupingUsed(true);
+			for (VietinVirtualAcctTransHistory e : trxDetails) {
+				// Write data on row
+				rowIndex = writeBodyExcel(sheet, rowIndex, e, VietinVirtualAcctTransHistory.class, currencyFormat);
+				counter++;
+			}
+			// Set counter value in column A starting from row 8
+			rowIndex = 7;  // Starting from row 8 (0-based index 7)
+			for (int i = 0; i < trxDetails.size(); i++) {
+				Row row = getRow(sheet, rowIndex++);
+				Cell cell = getCell(row, 0); // Column A
+				cell.setCellValue(i + 1);  // Set counter value
+			}
+			// Apply formatting to the cells
+			CellStyle style = workbook.createCellStyle();
+			style.setAlignment(HorizontalAlignment.CENTER);
+			style.setVerticalAlignment(VerticalAlignment.CENTER);
+			style.setBorderTop(BorderStyle.THIN);
+			style.setBorderRight(BorderStyle.THIN);
+			style.setBorderBottom(BorderStyle.THIN);
+			Font font = workbook.createFont();
+			font.setFontName("Times New Roman");
+			style.setFont(font);
+			for (int i = 7; i < rowIndex; i++) {
+				Row row = getRow(sheet, i);
+				for (int j = 0; j < row.getLastCellNum(); j++) {
+					Cell cell = getCell(row, j);
+					cell.setCellStyle(style);
+				}
+			}
+			// write aggregated data
+			DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern(OneFinConstants.DATE_FORMAT_TRANS);
+			DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern(OneFinConstants.DATE_FORMAT_dd_MM_yyyy);
+			BigDecimal totalPaidAmount = trxDetails.stream()
+					.map(VietinVirtualAcctTransHistory::getAmount)
+					.filter(Objects::nonNull) // Filter out null values
+					.reduce(BigDecimal.ZERO, BigDecimal::add);
+			Row row1 = sheet.getRow(1);
+			if (row1 == null) {
+				row1 = sheet.createRow(1);
+			}
+			Cell cellF2 = row1.getCell(5);
+			if (cellF2 == null) {
+				cellF2 = row1.createCell(5);
+			}
+			cellF2.setCellValue(date);
+			Cell cellF3 = sheet.getRow(2).getCell(5);
+			cellF3.setCellValue(date);
+			Cell cellF4 = sheet.getRow(3).getCell(5);
+			cellF4.setCellValue(trxDetails.size());
+			Cell cellF5 = sheet.getRow(4).getCell(5);
+			cellF5.setCellValue(totalPaidAmount.doubleValue());
+			// Save file to excelFilePath
+			try (FileOutputStream outputStream = new FileOutputStream(excelFilePath)) {
+				workbook.write(outputStream);
+			}
+
+		} catch (Exception e) {
+			LOGGER.error("Cannot write excel file", e);
+		} finally {
+			if (templateInputStream != null) {
+				templateInputStream.close();
+			}
+			if (workbook != null) {
+				workbook.close();
+			}
+		}
+	}
+
+	//Map data vào excel
+	private int writeBodyExcel(Sheet sheet, int rowIndex, VietinVirtualAcctTransHistory trx, Class<?> clazz, NumberFormat currencyFormat) {
+		Map<String, String> fieldToHeaderMap = new LinkedHashMap<>();
+		fieldToHeaderMap.put("amount", "Amount");
+		fieldToHeaderMap.put("bankCode", "Bank Code");
+		fieldToHeaderMap.put("createdDate", "Ngày tạo giao dịch");
+		fieldToHeaderMap.put("updatedDate", "Ngày cập nhật giao dịch");
+		fieldToHeaderMap.put("expireTime", "Ngày hết hạn giao dịch");
+		fieldToHeaderMap.put("tranStatus", "Status");
+		fieldToHeaderMap.put("virtualAcctVar", "Virtual Account");
+		fieldToHeaderMap.put("merchantCode", "Merchant code");
+
+		Row row = getRow(sheet, rowIndex);
+		int cellIndex = 1;  // skip first column (A)
+		for (String fieldName : fieldToHeaderMap.keySet()) {
+			try {
+				Field field = getField(clazz, fieldName);
+				field.setAccessible(true);
+				Cell cell = getCell(row, cellIndex++);
+				Object fieldValue = field.get(trx);
+				cell.setCellValue(fieldValue != null ? String.valueOf(fieldValue) : "");
+			} catch (Exception e) {
+				LOGGER.error(e.getMessage(), e);
+			}
+		}
+		rowIndex++;
+		return rowIndex;
+	}
+
+
+	private int writeHeaderExcel(Sheet sheet, int rowIndex, Class<?> clazz) {
+		Map<String, String> fieldToHeaderMap = new LinkedHashMap<>();
+		fieldToHeaderMap.put("amount", "Amount");
+		fieldToHeaderMap.put("bankCode", "Bank Code");
+		fieldToHeaderMap.put("createdDate", "Ngày tạo giao dịch");
+		fieldToHeaderMap.put("updatedDate", "Ngày cập nhật giao dịch");
+		fieldToHeaderMap.put("expireTime", "Ngày hết hạn giao dịch");
+		fieldToHeaderMap.put("tranStatus", "Status");
+		fieldToHeaderMap.put("virtualAcctVar", "Virtual Account");
+		fieldToHeaderMap.put("merchantCode", "Merchant code");
+
+		Row row = getRow(sheet, rowIndex);
+		int cellIndex = 1;  // skip first column (A)
+		for (String fieldName : fieldToHeaderMap.keySet()) {
+			Cell cell = getCell(row, cellIndex++);
+			cell.setCellValue(fieldToHeaderMap.get(fieldName));
+		}
+		rowIndex++;
+		return rowIndex;
+	}
+
 }
