@@ -309,7 +309,7 @@ bvb:
 
 conn-service:
   utility:
-    host: http://localhost:8062
+    host: http://onefin-utility.onefin.in
     uri:
       notify: /utilities/notifications/email
       ascMerchantList: /utilities/pg/asc/list
