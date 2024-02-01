@@ -9,6 +9,7 @@ import com.onefin.ewallet.common.domain.settlement.VietinBillReport;
 import com.onefin.ewallet.common.domain.settlement.VietinBillSummary;
 import com.onefin.ewallet.common.utility.date.DateTimeHelper;
 import com.onefin.ewallet.common.utility.file.ExcelHelper;
+import com.onefin.ewallet.settlement.dto.VietinVirtualTransHistoryTestDTO;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
@@ -645,7 +646,7 @@ public class ReportHelper extends ExcelHelper {
 		return rowIndex;
 	}
 
-	public void writeExcelByBankCodeAndCreatedDate(List<VietinVirtualAcctTransHistory> trxDetails, String date, String excelFilePath) throws IOException {
+	public void writeExcelByBankCodeAndCreatedDate(List<VietinVirtualTransHistoryTestDTO> trxDetails, Date date, String excelFilePath) throws IOException {
 		Workbook workbook = null;
 		InputStream templateInputStream = null;
 		try {
@@ -666,9 +667,9 @@ public class ReportHelper extends ExcelHelper {
 			int counter = 1;
 			NumberFormat currencyFormat = NumberFormat.getNumberInstance();
 			currencyFormat.setGroupingUsed(true);
-			for (VietinVirtualAcctTransHistory e : trxDetails) {
+			for (VietinVirtualTransHistoryTestDTO e : trxDetails) {
 				// Write data on row
-				rowIndex = writeBodyExcel(sheet, rowIndex, e, VietinVirtualAcctTransHistory.class, currencyFormat);
+				rowIndex = writeBodyExcel(sheet, rowIndex, e, VietinVirtualTransHistoryTestDTO.class, currencyFormat);
 				counter++;
 			}
 			// Set counter value in column A starting from row 8
@@ -699,7 +700,7 @@ public class ReportHelper extends ExcelHelper {
 			DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern(OneFinConstants.DATE_FORMAT_TRANS);
 			DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern(OneFinConstants.DATE_FORMAT_dd_MM_yyyy);
 			BigDecimal totalPaidAmount = trxDetails.stream()
-					.map(VietinVirtualAcctTransHistory::getAmount)
+					.map(VietinVirtualTransHistoryTestDTO::getAmount)
 					.filter(Objects::nonNull) // Filter out null values
 					.reduce(BigDecimal.ZERO, BigDecimal::add);
 			Row row1 = sheet.getRow(1);
@@ -735,7 +736,7 @@ public class ReportHelper extends ExcelHelper {
 	}
 
 	//Map data vào excel
-	private int writeBodyExcel(Sheet sheet, int rowIndex, VietinVirtualAcctTransHistory trx, Class<?> clazz, NumberFormat currencyFormat) {
+	private int writeBodyExcel(Sheet sheet, int rowIndex, VietinVirtualTransHistoryTestDTO trx, Class<?> clazz, NumberFormat currencyFormat) {
 		Map<String, String> fieldToHeaderMap = new LinkedHashMap<>();
 		fieldToHeaderMap.put("amount", "Amount");
 		fieldToHeaderMap.put("bankCode", "Bank Code");

@@ -18,6 +18,8 @@ import com.onefin.ewallet.settlement.common.SettleConstants;
 import com.onefin.ewallet.settlement.common.SettleHelper;
 import com.onefin.ewallet.settlement.config.SFTPBvbVirtualAcctIntegration;
 import com.onefin.ewallet.settlement.controller.SettleJobController;
+import com.onefin.ewallet.settlement.dto.VietinVirtualTransHistoryService;
+import com.onefin.ewallet.settlement.dto.VietinVirtualTransHistoryTestDTO;
 import com.onefin.ewallet.settlement.dto.bvb.ReconciliationDto;
 import com.onefin.ewallet.settlement.dto.bvb.ReconciliationDtoExport;
 import com.onefin.ewallet.settlement.dto.bvb.ReconciliationMonthlyDetailDto;
@@ -30,6 +32,7 @@ import com.onefin.ewallet.settlement.repository.VietinNotifyTransTableRepo;
 import com.onefin.ewallet.settlement.service.ConfigLoader;
 import com.onefin.ewallet.settlement.service.MinioService;
 import com.onefin.ewallet.settlement.service.SettleService;
+import com.onefin.ewallet.settlement.service.vnpay.ReportHelper;
 import com.opencsv.bean.CsvToBeanBuilder;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.input.BOMInputStream;
@@ -129,6 +132,13 @@ public class BVBankReconciliation {
 
 	@Autowired
 	private SettleJobController settleJobController;
+
+	@Autowired
+	private ReportHelper reportHelper;
+
+	@Autowired
+	private VietinVirtualTransHistoryService vietinService;
+
 
 	public boolean compareReconciliation(ReconciliationDto reconciliationDto,
 										 VietinNotifyTransTable vietinNotifyTransTable) throws ParseException {
@@ -2273,5 +2283,72 @@ public class BVBankReconciliation {
 			return null;
 		}
 
+	}
+
+	public List<VietinVirtualTransHistoryTestDTO> getExcelData(VietinVirtualTransHistoryTestDTO test) {
+		boolean checkBankCode = vietinService.isBankCodeValid(test.getBankCode());
+
+		if (!checkBankCode) {
+			throw new IllegalArgumentException("Invalid bank code");
+		}
+
+		boolean checkStatus = vietinService.isStatusValid(test.getTranStatus());
+
+		if (!checkStatus) {
+			throw new IllegalArgumentException("Invalid transaction status");
+		}
+
+		return vietinService.getExcelByCodeAndDate(test);
+	}
+
+	public byte[] generateExcelFile(List<VietinVirtualTransHistoryTestDTO> results,
+									Date createdDate, File file) throws IOException {
+		reportHelper.writeExcelByBankCodeAndCreatedDate(results, createdDate, file.getAbsolutePath());
+		return Files.readAllBytes(file.toPath());
+	}
+
+	public void sendEmail(byte[] file, List<VietinVirtualTransHistoryTestDTO> excelData, Date fromDateString, Date toDateString) {
+		Map<String, Object> payload = new HashMap<>();
+		payload.put("fromDate", fromDateString);
+		payload.put("toDate", toDateString);
+
+		String fileLocationFull = "";
+
+		fileLocationFull = OneFinConstants.PARTNER_BVBANK + "/EMAIL_RECONCILIATION_EXPORT_BVB/"
+				+ MinioSavedFolder + OneFinConstants.SLASH + filenameSaved;
+
+
+		minioService.uploadByte(env.getProperty("minio.bvbReconciliationBucket"),
+				fileLocationFull,
+				outputStreamXslx.toByteArray(),
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+
+		List<String> attachList = new ArrayList<>();
+
+		if (!fileLocationFull.isEmpty()) {
+			attachList.add(fileLocationFull);
+		}
+
+		String emailTitle = "[ONEFIN - BVBANK] Danh sách giao dịch tổng hợp từ "
+				+ fromDateString + " đến " + toDateString;
+
+		List<String> emailList = new ArrayList<>();
+		List<String> emailCC = new ArrayList<>();
+		List<String> emailBCC = new ArrayList<>();
+		emailList.addAll(Arrays.asList(emailSend.split(",")));
+//			emailBCC.add("locle@onefin.vn");
+		if (emailSendCC != null && !emailSendCC.isEmpty()) {
+			emailCC.addAll(Arrays.asList(emailSendCC.split(",")));
+		}
+
+		EmailDto data = new EmailDto(
+				emailList,
+				emailCC, emailBCC,
+				payload, env.getProperty("minio.bvbReconciliationBucket"),
+				attachList,
+				emailTitle,
+				"bvb_reconciliation_export");
+		sendEmail(data);
 	}
 }

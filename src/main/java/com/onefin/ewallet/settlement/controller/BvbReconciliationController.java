@@ -3,10 +3,11 @@ package com.onefin.ewallet.settlement.controller;
 
 import com.onefin.ewallet.common.base.constants.OneFinConstants;
 import com.onefin.ewallet.common.base.service.RestTemplateHelper;
-import com.onefin.ewallet.common.domain.bank.vietin.VietinVirtualAcctTransHistory;
 import com.onefin.ewallet.common.domain.constants.DomainConstants;
 import com.onefin.ewallet.common.utility.date.DateTimeHelper;
 import com.onefin.ewallet.settlement.config.SFTPBvbVirtualAcctIntegration;
+import com.onefin.ewallet.settlement.dto.VietinVirtualTransHistoryService;
+import com.onefin.ewallet.settlement.dto.VietinVirtualTransHistoryTestDTO;
 import com.onefin.ewallet.settlement.repository.VietinVirtualAcctTransHistoryRepo;
 import com.onefin.ewallet.settlement.service.ConfigLoader;
 import com.onefin.ewallet.settlement.service.bvbank.BVBankReconciliation;
@@ -25,11 +26,8 @@ import org.springframework.integration.sftp.session.SftpRemoteFileTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.validation.Valid;
 import java.io.File;
-import java.nio.file.Files;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -58,6 +56,9 @@ public class BvbReconciliationController {
 
 	@Autowired
 	private VietinVirtualAcctTransHistoryRepo vietinVirtualAcctTransHistoryRepo;
+
+	@Autowired
+	private VietinVirtualTransHistoryService vietinService;
 
 	@GetMapping("/simulate/{currentDateString}")
 	public ResponseEntity<?> reconciliationSimulate(
@@ -204,22 +205,12 @@ public class BvbReconciliationController {
 
 	@PostMapping("/simulate-full/xlsx-export/test")
 	public ResponseEntity<?> reconciliationExportTest(
-			@RequestBody(required = true) Map<String, String> test
+			@Valid @RequestBody VietinVirtualTransHistoryTestDTO test
 	) throws Exception {
-		LocalDate date = LocalDate.parse(test.get("createdDate"));
 
-		LocalDateTime startOfDay = date.atStartOfDay();
+		File file = new File("test.xlsx");
 
-		LocalDateTime startOfNextDay = date.plusDays(1).atStartOfDay();
-
-		// Format ngày
-		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-
-		String formattedStartOfDay = startOfDay.format(formatter);
-
-		String formattedStartOfNextDay = startOfNextDay.format(formatter);
-
-		List<VietinVirtualAcctTransHistory> results = vietinVirtualAcctTransHistoryRepo.findByCodeAndDate(test.get("bankCode"), formattedStartOfDay, formattedStartOfNextDay);
+		List<VietinVirtualTransHistoryTestDTO> results = bvBankReconciliation.getExcelData(test);
 
 		HttpHeaders headers = new HttpHeaders();
 
@@ -227,18 +218,12 @@ public class BvbReconciliationController {
 
 		headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
 
-		File file = new File("test.xlsx");
-
 		headers.setContentDispositionFormData(file.getName(), file.getName());
 
-		LOGGER.info("Test: {}", file.getCanonicalPath());
-
-		reportHelper.writeExcelByBankCodeAndCreatedDate(results, test.get("createdDate"), file.getAbsolutePath());
-
 		// Read the content of the Excel file into a byte array
-		byte[] fileContent = Files.readAllBytes(file.toPath());
+		byte[] fileContent = bvBankReconciliation.generateExcelFile(results, test.getCreatedDate(), file);
 
-		return new ResponseEntity<>(fileContent, headers, HttpStatus.OK);
+		return new ResponseEntity<>(HttpStatus.OK);
 	}
 
 }
